@@ -1,0 +1,148 @@
+#!/usr/local/bin/python3
+
+import email,gzip,json,pathlib,subprocess,sys,urllib.request,urllib.error
+import yaml
+
+def sysrc(key,val=None):
+    # Read/write rc.conf values using sysrc
+    if val:
+        subprocess.run(['/usr/sbin/sysrc','{}={}'.format(key,val)],check=True)
+    else:
+        subprocess.run(['/usr/sbin/sysrc',key],check=True)
+
+def runrc(name,check=True,method='restart',args=None):
+    # Rerun service initialisation (picking up new rc.conf values)
+    subprocess.run(['/usr/sbin/service',name,method] + (args or []),check=check)
+    
+def savejson(name,data):
+    # Save section as JSON
+    with open(name,'w') as f:
+        json.dump(data,f,indent=4)
+        f.write("\n")
+
+def msg(s):
+    print("\n{}\n".format(s))
+    sys.stdout.flush()
+
+def vendor_data(data):
+    # Handle vendor_data section - we can ignore this but save anyway
+    # Extract multipart-mime files ('hc-boot-script','cloud-config')
+    vendor_data = email.message_from_string(data)
+    for p in vendor_data.walk():
+        if not p.is_multipart():
+            name = p.get_filename()
+            with open(name,"w") as f:
+                f.write(p.get_payload())
+                f.write("\n")
+
+def hostname(name):
+    # Set hostname
+    msg("[+] Setting hostname")
+    sysrc('hostname',name)
+    runrc('hostname')
+
+def sshkeys(keys):
+    # Write SSH keys to /root/.ssh/authorized_keys
+    msg("[+] Adding SSH keys")
+    sshdir = pathlib.Path('/root/.ssh')
+    sshdir.mkdir(mode=0o700,exist_ok=True)
+    ak = sshdir / 'authorized_keys'
+    with ak.open('w') as f:
+        for sshkey in keys:
+            f.write(sshkey)
+            f.write('\n')
+    ak.chmod(0o600)
+
+def network_config(config):
+    # You might expect all network interfaces to be defined here
+    # but only primary interface data is provided (does not include
+    # private interfaces) - though we go through list anyway
+    msg("[+] Configuring network")
+    for iface in config:
+        # Rename interface from ethXX to vtnetXX
+        ifname = iface['name'].replace('eth','vtnet')
+        for subnet in iface['subnets']:
+            if subnet.get('ipv4',False):
+                # We always configure primary interface IPv4 via DHCP
+                if subnet['type'] == 'dhcp':
+                    sysrc('ifconfig_{}'.format(ifname),'DHCP')
+            elif subnet.get('ipv6',False):
+                # Configure static IPv6 address 
+                if subnet['type'] == 'static':
+                    address,prefix = subnet['address'].split('/')
+                    sysrc('ifconfig_{}_ipv6'.format(ifname),
+                        'inet6 {} prefixlen {}'.format(address,prefix))
+                if subnet.get('gateway',False):
+                    # Occasionally we dont get a correct link-local address
+                    if subnet['gateway'].startswith('fe80:'):
+                        gw_addr = subnet['gateway'].split('%')[0] + '%' + ifname
+                        sysrc('ipv6_defaultrouter', gw_addr)
+                    else:
+                        sysrc('ipv6_defaultrouter', subnet['gateway'])
+    # We now configure any unconfigured interfaces
+    ifaces = subprocess.run(['/sbin/ifconfig','-ld','ether'],
+                                capture_output=True,check=True)
+    for ifname in ifaces.stdout.decode('ascii').split():
+        sysrc('ifconfig_{}'.format(ifname),'DHCP')
+    # We now reconfigure network interfaces and routing
+    msg("[+] Restarting network")
+    runrc('netif')
+    runrc('routing',False)  # Ignore errors from existing routes
+    runrc('dhclient',args=['vtnet0'])
+
+def hcloud_metadata():
+    # Get instance metadata
+    try:
+        with urllib.request.urlopen('http://169.254.169.254/hetzner/v1/metadata') as r:
+            # Parse YAML
+            config = yaml.safe_load(r.read())
+    except urllib.error.URLError as e:
+        raise ValueError("Error fetching instance metadata: {}".format(e.reason))
+
+    # Handle sections
+    for k,v in config.items():
+        if k == "vendor_data":
+            vendor_data(v)
+        else:
+            # Save config section to local directory (usually /var/hcloud)
+            savejson(k,v)
+            if k == 'hostname':
+                hostname(v)
+            elif k == 'public-keys':
+                sshkeys(v)
+            elif k == 'network-config':
+                network_config(v['config'])
+
+def hcloud_userdata():
+    # Get instance userdata
+    try:
+        msg("[+] Running userdata script")
+        with urllib.request.urlopen('http://169.254.169.254/hetzner/v1/userdata') as r:
+            # Write to 'user-data'
+            userdata = pathlib.Path('./user-data')
+            with userdata.open('wb') as f:
+                # Check for GZ compressed 
+                if r.peek()[:3] == b'\x1f\x8b\x08':
+                    f.write(gzip.decompress(r.read()))
+                else:
+                    f.write(r.read())
+            userdata.chmod(0o700)
+            if userdata.stat().st_size > 0:
+                subprocess.run(['./user-data'],check=True)
+    except urllib.error.URLError as e:
+        raise ValueError("Error fetching instance userdata: {}".format(e.reason))
+
+if __name__ == '__main__':
+    # Get metadata
+    hcloud_metadata()
+    # Try to get fqdn from cloud-config
+    try:
+        with open("/var/hcloud/cloud-config") as f:
+            cloud_config = yaml.safe_load(f)
+            fqdn = cloud_config.get("fqdn")
+            if fqdn:
+                hostname(fqdn)
+    except:
+        pass
+    # Get userdate
+    hcloud_userdata()

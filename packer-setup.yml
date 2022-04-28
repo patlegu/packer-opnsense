@@ -1,0 +1,30 @@
+---
+- name: set up local dir with packer json and build files
+  hosts: localhost
+  gather_facts: no
+  vars:
+    opt_packer_setup_username: packer
+    opt_packer_setup_password: packer
+    opt_packer_setup_headless: true
+    opt_packer_setup_builder: hcloud
+
+  pre_tasks:
+  - name: check that the Ansible version is at least 2.7
+    assert:
+      that:
+      - ansible_version.major >= 2
+      - ansible_version.minor >= 7
+      msg: packer-esxi requires Ansible 2.7 or newer to run, please upgrade or checkout devel before running
+
+  - name: check that the provider is valid
+    assert:
+      that:
+      - opt_packer_setup_builder in ['hyperv', 'qemu', 'virtualbox', 'hcloud', 'vmware_iso']
+      msg: packer-esxi only supports the hyperv, qemu, hcloud, vmware-iso and virtualbox provider
+
+  - name: check that pypsrp is installed
+    command: python -c "import pypsrp"
+    changed_when: False
+
+  roles:
+  - packer-setup

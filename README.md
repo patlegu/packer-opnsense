@@ -1,130 +1,47 @@
-# hcloud-freebsd
+# OPNsense Hetzner
 
-Hetzner Cloud auto-provisioning for FreeBSD
-
-## Introduction
-
-This repository enables auto-provisioning of FreeBSD instances on 
-[Hetzner Cloud](https://www.hetzner.com/cloud).
-
-Currently only Linux auto-provisioning is enabled by default however by
-initially manually configuring a FreeBSD instance and adding the `hcloud`
-utility and `rc.d` script included in this repository, it is possible to create
-a snapshot which can be used as a base instance and supports the normal
-auto-configuration functions available either in the cloud console or via the
-api/cli tools. 
-
-### *** Note that currently FreeBSD doesn't work on CPX (AMD/EPYC) instances - only CP (XEON) ***
-
-## Installation
-
-### OS Installation
-
-Automated installation of FreeBSD instances is not currently available for
-Hetzner Cloud, however it is possible to manually configure an instance as
-follows:
-
-* Create a VM instance using the [cloud console](https://console.hetzner.cloud/projects). 
-  Pick a server type that matches the one you want to provision as a template
-  (usually the smallest SSD type - currently CX11 - as you can resize instances
-  upwards). The base image doesn't matter at this stage. 
-
-* When the server has booted select the instance in the cloud console and
-  attach a FreeBSD ISO image (select _ISO Images_ and search for an appropriate
-  FreeBSD instance). The script will also support HardenedBSD however you will
-  need to ask support to make the ISO available.
-
-* From the cloud console open the device console (**>_**) and reboot server.
-
-* The FreeBSD installer should now start and you can install FreeBSD as normal.
-  See the [FreeBSD handbook](https://www.freebsd.org/doc/handbook/bsdinstall.html) for details.
-  The recommended options for installation are:
-
-  - Appropriate keymap/hostname
-  - Default install components (kernel-dbg/lib32)
-  - Configure networking (**vtnet0/IPv4/DHCP**) - don't worry about configuring 
-    IPv6 at the moment (will be configured for cloned instances through cloud-config)
-  - Select distrobution mirror - default is fine (ftp://ftp.freebsd.org) 
-  - Select  **Auto (UFS)** partition type, **Entire Disk**, **GPT**, and accept default partitions (it is also possible to use ZFS if prefered - though UFS might be more suitable for low-memory instances). 
-  - _(Distribution files should now install)_
-  - Set root password (this is only needed for initial configuration - password login will be 
-    disabled for instances)
-  - Select appropriate Time Zone and Date/Time
-  - Select default services (at least **sshd**)
-  - Chose security hardening options (I usually select all of these)
-  - Do **not** add users to the system unless you specifically want these as part of the base image
-  - Exit installer making shre you select **Yes** to drop to **shell** to complete configuration
-  
-* From the installation shell follow the instructions in [config.sh](https://github.com/paulc/hcloud-freebsd/blob/master/config.sh) (either manually or by downloading the script):
-
-* The instance will power off at the end of the installation
-
-* From the Hetzner cloud console 
-  - **Unmount ISO**
-  - From Snapshots menu **Take Snapshot**
-  - When the snapshot has been created you can now use this as a template to
-    start new cloud instances
-
-### Creating Instances
-
-* To create a new instance click on **Add Server** as normal and select the
-  appropriate snapshot from the  **Images / Snapshots** tab (you can also
-  view the the snapshot page and create a new server from there).
-
-* Select the options as normal on the **Add Server** page. These will be picked up by
-the `rc/hcloud` script on firstboot and the server configured. 
-
-* The script supports auto-configuration of the following settings:
-
-  - **hostname**
-  - **network interfaces** (iprimary interface IPv4 and IPv6 addresses,
-    additional private interfaces will be autodetected and configured to run
-    DHCP) 
-  - **ssh keys** will be added to root user
-  - **userdata** script will be run. Note that the userdata script will be 
-    written to disk and run directly so must be a valid script for the 
-    target system - in particular you will almost certainly just want to
-    use a plain /bin/sh script (first line should be `#!/bin/sh`). Multipart
-    files and cloud-config (`#cloud-config`) data are not supported (GZ
-    compressed files _are_ supported).
-
-* Note that additional volumes are not auto-configured but will be
-  automatically detected by the kernel (`/dev/da[123...]`) so could be
-  configured/mounted using the user-data script. 
-
-* If needed it is possible to grow the FS for larger instances automatically
-  via the **userdata** script. It should also be possible to use `rc.d/growfs`
-  (needs `growfs_enable=YES` in `rc.conf` and the root partition to be the last
-  partition) although I haven't tested this. 
-
-* Alternatively it is posisble to use the additional space to add an additional
-  FS (eg. for ZFS) from the userdata script.  You can check if the image has
-  been installed onto a larger sized instance by running `gpart show da0 | grep
-  -qs CORRUPT` and then `gpart recover` / `gpart add` etc.
-
-* A copy of the cloud configuration parameters (split by section), the 
-  user-data script, and an installation log are saved in the /var/hcloud
-  directory.
-
-* The rc(8) system will automatically delete the /firstboot flag after
-  the first-boot so the script will only run once.
-
-* It is also possible to configure new instances via the API or hcloud 
-  utility - eg:
-
-  - `hcloud server create --image <imageid> --name <name> --user-data-from-file <userdata>  --ssh-key <keyname> --type <type> --location <location>`
-
-### Maintaining Images
-
-* To maintain images (run freebsd-update/update pkgs etc) a couple of 
-  example scripts are provides in the **/util** directory. 
-
-  - [update.sh](https://github.com/paulc/hcloud-freebsd/blob/master/util/update.sh) 
-    will automatically run basic OS/pkg updates on the image and then resave 
-    (deleting original)
-
-  - [patch.sh](https://github.com/paulc/hcloud-freebsd/blob/master/util/patch.sh) 
-    will do the same but first launch a single use sshd instance on port 9022
-    to allow interactive configuration
-
-  - (Note that in both cases the **imageid** will change)
+## Possible values for differents data usable for Hetzner Cloud.
+### Possible values for Location:
+```
+ hcloud location list
+ID   NAME   DESCRIPTION             NETWORK ZONE   COUNTRY   CITY
+1    fsn1   Falkenstein DC Park 1   eu-central     DE        Falkenstein
+2    nbg1   Nuremberg DC Park 1     eu-central     DE        Nuremberg
+3    hel1   Helsinki DC Park 1      eu-central     FI        Helsinki
+4    ash    Ashburn, VA             us-east        US        Ashburn, VA
+```
+### Possible values for Datacenter:
+```
+hcloud datacenter list
+ID   NAME        DESCRIPTION          LOCATION
+2    nbg1-dc3    Nuremberg 1 DC 3     nbg1
+3    hel1-dc2    Helsinki 1 DC 2      hel1
+4    fsn1-dc14   Falkenstein 1 DC14   fsn1
+5    ash-dc1     Ashburn DC1          ash
+```
+### Possible value for server-type:
+```
+hcloud server-type list
+ID   NAME    CORES   MEMORY     DISK     STORAGE TYPE
+1    cx11    1       2.0 GB     20 GB    local
+3    cx21    2       4.0 GB     40 GB    local
+5    cx31    2       8.0 GB     80 GB    local
+7    cx41    4       16.0 GB    160 GB   local
+9    cx51    8       32.0 GB    240 GB   local
+11   ccx11   2       8.0 GB     80 GB    local
+12   ccx21   4       16.0 GB    160 GB   local
+13   ccx31   8       32.0 GB    240 GB   local
+14   ccx41   16      64.0 GB    360 GB   local
+15   ccx51   32      128.0 GB   600 GB   local
+22   cpx11   2       2.0 GB     40 GB    local
+23   cpx21   3       4.0 GB     80 GB    local
+24   cpx31   4       8.0 GB     160 GB   local
+25   cpx41   8       16.0 GB    240 GB   local
+26   cpx51   16      32.0 GB    360 GB   local
+33   ccx12   2       8.0 GB     80 GB    local
+34   ccx22   4       16.0 GB    160 GB   local
+35   ccx32   8       32.0 GB    240 GB   local
+36   ccx42   16      64.0 GB    360 GB   local
+37   ccx52   32      128.0 GB   600 GB   local
+38   ccx62   48      192.0 GB   960 GB   local
+```

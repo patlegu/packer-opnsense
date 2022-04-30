@@ -8,3 +8,4 @@ build/*.box
 build/output
 .idea/workspace.xml
 To_Be_Deleted
+vars.json

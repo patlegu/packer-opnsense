@@ -1,5 +1,5 @@
-data "hcloud_image" "db" {
-  selector = "name=db_${var.release}"
+data "hcloud_image" "web" {
+  selector = "name=web_${var.release}"
 }
 
 resource "hcloud_server" "web" {
@@ -25,17 +25,6 @@ resource "null_resource" "web" {
     host = "${hcloud_server.web.ipv4_address}"
     user = "${var.ssh_user}"
     port = "${var.ssh_port}"
-  }
-
-  provisioner "file" {
-    source = "scripts/postgresql/files/postgresql-backup.sh"
-    destination = "/tmp/postgresql-backup.sh"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "sudo -H bash /tmp/postgresql-backup.sh restore all || exit 0",
-    ]
   }
 }
 

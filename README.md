@@ -1,5 +1,15 @@
 # OPNsense Hetzner
-
+## Hetzner Hcloud CMD line
+The easiest way to get information from the cmd line is using [hetzner cloud cmdline](https://github.com/hetznercloud/cli)
+To use it, you need to used your hetzner token, so on possibility:
+* Put it in the vars.json (copy vars.example.json)
+* install jq ([sed for json](https://stedolan.github.io/jq/)) on your server if you don't have it.
+* initialize you token as a variable:
+```
+export HCLOUD_TOKEN=$(jq -r .hcloud_token vars.json)
+```
+You're ready to use the ***CLI***.
+Some information you can get from this tools and usable directly from bash.
 ## Possible values for differents data usable for Hetzner Cloud.
 ### Possible values for Location:
 ```
@@ -44,4 +54,47 @@ ID   NAME    CORES   MEMORY     DISK     STORAGE TYPE
 36   ccx42   16      64.0 GB    360 GB   local
 37   ccx52   32      128.0 GB   600 GB   local
 38   ccx62   48      192.0 GB   960 GB   local
+```
+with the follawing helps for the ***hclouc server list*** columns values. 
+Note that even if the columns is in capitals, the value must be in lowercase.
+```
+hcloud server list
+ID         NAME               STATUS    IPV4            IPV6                    DATACENTER
+12345678   debian-2gb-ash-1   running   ww.xxx.yy.zzz   www:xxx:yy:zzzz::/64   ash-dc1
+```
+To have only the IP address of the server
+```
+hcloud server list  --output noheader --output columns=ipv4
+```
+```
+Displays a list of servers.
+
+Output can be controlled with the -o flag. Use -o noheader to suppress the
+table header. Displayed columns and their order can be set with
+-o columns=backup_window,datacenter (see available columns below).
+
+Columns:
+ - backup_window
+ - datacenter
+ - id
+ - ipv4
+ - ipv6
+ - labels
+ - location
+ - locked
+ - name
+ - private_net
+ - protection
+ - rescue_enabled
+ - status
+ - type
+ - volumes
+
+Usage:
+  hcloud server list [FLAGS]
+
+Flags:
+  -h, --help                 help for list
+  -o, --output stringArray   output options: noheader|columns=...
+  -l, --selector string      Selector to filter by labels
 ```

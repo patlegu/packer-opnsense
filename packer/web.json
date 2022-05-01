@@ -1,0 +1,31 @@
+{
+  "builders": [
+    {
+      "type": "hcloud",
+      "snapshot_name": "web_{{user `release`}}",
+      "snapshot_labels": {
+        "name": "web_{{user `release`}}",
+        "app": "web",
+        "release": "{{user `release`}}",
+        "env": "{{user `env`}}"
+      },
+      "token": "{{user `hcloud_token`}}",
+      "image": "{{user `base_img_id`}}",
+      "location": "{{user `location`}}",
+      "server_type": "cx11",
+      "ssh_username": "{{user `ssh_user`}}",
+      "ssh_port": "{{user `ssh_port`}}",
+      "ssh_agent_auth": true
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "scripts/common/functions.sh",
+      "destination": "/tmp/functions.sh"
+    }
+  ],
+  "variables": {
+    "base_img_id": "{{env `BASE_IMG_ID`}}"
+  }
+}

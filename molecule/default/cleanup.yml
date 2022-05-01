@@ -1,0 +1,12 @@
+---
+
+- name: Clean the Molecule Tests Resources
+  hosts: all
+  vars:
+    _base_directory: "{{ playbook_dir }}"
+    _root_directory: "{{ _base_directory }}/../.."
+  tasks:
+    # - name: Delete build directories
+    #   file:
+    #     path: "{{ _base_directory }}/roles/awx"
+    #     state: absent

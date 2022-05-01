@@ -1,0 +1,30 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  set -env
+  yamllint .
+  ansible-lint
+  flake8
+platforms:
+  - name: debian11
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-debian11}-ansible:latest"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /srv:/srv:rw
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "/etc/ansible/roles:${ playbook_dir }/roles"
+  playbooks:
+    converge: ${MOLECULE_PLAYBOOK:-converge.yml}
+  # config_options:
+      # defaults:
+        # callback_plugins: /usr/lib/python2.7/site-packages/ara/plugins/callbacks
+verifier:
+  name: ansible

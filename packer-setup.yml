@@ -1,7 +1,7 @@
 ---
 - name: set up local dir with packer json and build files
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   vars:
     opt_packer_setup_username: packer
     opt_packer_setup_password: packer
@@ -19,12 +19,12 @@
   - name: check that the provider is valid
     assert:
       that:
-      - opt_packer_setup_builder in ['hyperv', 'qemu', 'virtualbox', 'hcloud', 'vmware_iso']
-      msg: packer-esxi only supports the hyperv, qemu, hcloud, vmware-iso and virtualbox provider
+      - opt_packer_setup_builder in ['hcloud']
+      msg: packer-opnsense only supports the hcloud provider for the moment.
 
-  - name: check that pypsrp is installed
-    command: python -c "import pypsrp"
-    changed_when: False
+  # - name: check that pypsrp is installed
+  #   command: python -c "import pypsrp"
+  #   changed_when: False
 
   roles:
   - packer-setup

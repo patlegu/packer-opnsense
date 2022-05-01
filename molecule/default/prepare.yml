@@ -1,0 +1,57 @@
+#########################################################################
+# Title:         ansible-role-awx-docker                                #
+# Author(s):     Patrice Le Guyader                                     #
+# URL:           none                                                   #
+# URL:                                                                  #
+# Docker Image:                                                         #
+# --                                                                    #
+#         Part of the Devops Infrastucture project:                     #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+
+- name: Prepare the Molecule Tests Resources
+  hosts: all
+  vars:
+#    AWX_dockerfile_dir: "{{ lookup('env', 'PWD') }}"
+    _base_directory: "{{ playbook_dir }}"
+    _root_directory: "{{ _base_directory }}/../.."
+  tasks:
+    # - name: "Debug YAML alias"
+      # debug: var=vars
+
+    # - name: Create directories
+    #   file:
+    #     path: "{{ _base_directory }}/roles/{{ item }}"
+    #     state: directory
+    #   with_items:
+    #     - awx
+    #     - nginx
+    #     - haproxy
+    #     - postgres
+    #     - redis
+
+    # - name: Copy AWX requirements files to Molecule directory on test plateform
+      # copy:
+        # src: "{{ _root_directory }}/roles/awx/files/requirements/"
+        # dest: "{{ _base_directory }}/roles/awx/files/requirements"
+      # tags: awx
+    
+    # - name: Copy AWX installation files to Molecule directory on test plateform
+      # copy:
+        # src: "{{ _root_directory }}/roles/awx/files/install/"
+        # dest: "{{ _base_directory }}/roles/awx/files/install"
+      # tags: awx
+    
+    # - name: Copy AWX configuration files to Molecule directory on test plateform
+      # copy:
+        # src: "{{ _root_directory }}/roles/awx/files/configuration/"
+        # dest: "{{ _base_directory }}/roles/awx/files/configuration"
+      # tags: awx
+
+    # - name: Copy AWX scripts files to Molecule directory on test plateform
+      # copy:
+        # src: "{{ _root_directory }}/roles/awx/files/scripts/"
+        # dest: "{{ _base_directory }}/roles/awx/files/scripts"
+      # tags: awx

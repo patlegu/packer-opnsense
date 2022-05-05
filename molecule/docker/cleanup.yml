@@ -1,5 +1,4 @@
 ---
-
 - name: Clean the Molecule Tests Resources
   hosts: all
   vars:

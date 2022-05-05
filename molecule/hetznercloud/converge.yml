@@ -8,8 +8,8 @@
       # Specify names and versions.
       - name: ansible
       - name: ara
-      - name: docker
-      - name: docker-compose
+#      - name: docker
+#      - name: docker-compose
       - name: jmespath
       - name: ciscoconfparse
     _base_directory: "{{ playbook_dir }}"

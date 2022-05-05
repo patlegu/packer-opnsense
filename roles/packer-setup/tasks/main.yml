@@ -80,6 +80,6 @@
         - cpp
         - kernel-devel
         - kernel-headers
-    - name : Clean Up Cache
+    - name: Clean Up Cache
       apt: autoclean=true
   when: ansible_distribution == 'Debian'

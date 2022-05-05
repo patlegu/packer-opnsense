@@ -20,7 +20,7 @@ platforms:
 provisioner:
   name: ansible
   env:
-    ANSIBLE_ROLES_PATH: "/etc/ansible/roles:${ playbook_dir }/roles"
+    ANSIBLE_ROLES_PATH: "/etc/ansible/roles/${playbook_dir}/roles"
   playbooks:
     converge: ${MOLECULE_PLAYBOOK:-converge.yml}
   # config_options:

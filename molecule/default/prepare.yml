@@ -1,5 +1,5 @@
 #########################################################################
-# Title:         ansible-role-awx-docker                                #
+# Title:         packer-opnsense                                        #
 # Author(s):     Patrice Le Guyader                                     #
 # URL:           none                                                   #
 # URL:                                                                  #
@@ -10,14 +10,44 @@
 #                   GNU General Public License v3.0                     #
 #########################################################################
 ---
-
 - name: Prepare the Molecule Tests Resources
   hosts: all
   vars:
 #    AWX_dockerfile_dir: "{{ lookup('env', 'PWD') }}"
     _base_directory: "{{ playbook_dir }}"
     _root_directory: "{{ _base_directory }}/../.."
+    fake_systemctl: true
   tasks:
+    - name: Enable fake systemctl on target system
+      block:
+        - name: Copy systemctl files to Molecule docker container on test plateform
+          copy:
+            src: "{{ _root_directory }}/scripts/systemctl.py"
+            dest: "/usr/local/bin/systemctl"
+          tags: systemctl
+  
+        - name: make /usr/local/bin/systemctl executable
+          ansible.builtin.file:
+           path: /usr/local/bin/systemctl
+           mode: a+x
+  
+        - name: Verifying if /bin/systemctl exist
+          stat: path=/bin/systemctl
+          register: bin_systemctl_stat
+  
+        - name: Move /bin/systemctl to /bin/systemctl.old
+          command: mv /bin/systemctl /bin/systemctl.old
+          when: bin_systemctl_stat.stat.exists
+  
+        - name: create link to fake /usr/local/bin/systemctl to /bin/systemctl
+          ansible.builtin.file:
+            src: /usr/local/bin/systemctl
+            dest: /bin/systemctl
+            owner: root
+            group: root
+            state: link
+      when: fake_systemctl
+  
     # - name: "Debug YAML alias"
       # debug: var=vars
 
@@ -32,11 +62,6 @@
     #     - postgres
     #     - redis
 
-    # - name: Copy AWX requirements files to Molecule directory on test plateform
-      # copy:
-        # src: "{{ _root_directory }}/roles/awx/files/requirements/"
-        # dest: "{{ _base_directory }}/roles/awx/files/requirements"
-      # tags: awx
     
     # - name: Copy AWX installation files to Molecule directory on test plateform
       # copy:

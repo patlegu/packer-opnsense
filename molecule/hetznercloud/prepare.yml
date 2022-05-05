@@ -1,9 +1,58 @@
 ---
 - name: Prepare
   hosts: all
-  gather_facts: false
+  gather_facts: true
+  vars:
+    _base_directory: "{{ playbook_dir }}"
+    _root_directory: "{{ _base_directory }}/../.."
+    fake_systemctl: false
   tasks:
-    # - name: Install python for Ansible
-    #   raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal python-zipstream)
-    #   become: true
-    #   changed_when: false
+    - name: Ensure necessary packages are installed.
+      ansible.builtin.package: "name={{ item }} state=latest install_recommends=no update_cache=yes"
+      with_items:
+        - python3
+        - sudo
+        - systemd
+        - systemd-sysv
+        - build-essential
+        - wget
+        - libffi-dev
+        - libssl-dev
+        - procps
+        - python3-pip
+        - python3-dev
+        - python3-setuptools
+        - python3-wheel
+        - python3-apt
+        - python3-cryptography
+        - iproute2
+
+    - name: Enable fake systemctl on target system
+      block:
+        - name: Copy systemctl files to Molecule docker container on test plateform
+          copy:
+            src: "{{ _root_directory }}/scripts/systemctl.py"
+            dest: "/usr/local/bin/systemctl"
+          tags: systemctl
+
+        - name: make /usr/local/bin/systemctl executable
+          ansible.builtin.file:
+           path: /usr/local/bin/systemctl
+           mode: a+x
+  
+        - name: Verifying if /bin/systemctl exist
+          stat: path=/bin/systemctl
+          register: bin_systemctl_stat
+  
+        - name: Move /bin/systemctl to /bin/systemctl.old
+          command: mv /bin/systemctl /bin/systemctl.old
+          when: bin_systemctl_stat.stat.exists
+  
+        - name: create link to fake /usr/local/bin/systemctl to /bin/systemctl
+          ansible.builtin.file:
+            src: /usr/local/bin/systemctl
+            dest: /bin/systemctl
+            owner: root
+            group: root
+            state: link
+      when: fake_systemctl

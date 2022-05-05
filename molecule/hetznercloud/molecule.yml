@@ -6,7 +6,7 @@ driver:
 platforms:
   - name: "packer-opnsense"
     server_type: cx11
-    image: debian-10
+    image: debian-11
     networks:
       molecule-hetznercloud-network-1:
         ip_range: 10.10.0.0/16
@@ -20,6 +20,10 @@ platforms:
           ip: 10.20.10.1/24
 provisioner:
   name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "/etc/ansible/roles/${playbook_dir}/roles"
+  playbooks:
+    converge: ${MOLECULE_PLAYBOOK:-converge.yml}
 lint: |
   set -e
   yamllint .
